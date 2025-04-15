@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .table {
+            margin-top: 30px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+        .table th {
+            background-color: #007bff;
+            color: white;
+        }
+        .table td {
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .card-title {
+            margin-bottom: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .card-title {
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            margin-top: 20px;
+        }
+        .card {
+            margin-top: 30px;
+        }
+        .table th,
+        .table td {
+            vertical-align: middle;
+        }
+        .btn-danger {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <p>Welcome, <%= user.username %>! Below is your account information:</p>
+
+        <!-- Display JWT in a table -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">User Information (Decoded from JWT)</h5>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Username</td>
+                            <td>
+                                <%= user.username %>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>JWT Token</td>
+                            <td>
+                                <pre style="word-wrap: break-word; white-space: pre-wrap;"><%= token %></pre>
+                            </td> <!-- Display the JWT token -->
+                        </tr>
+                        <tr>
+                            <td>Token Expiry</td>
+                            <td>
+                                <% if (decoded.exp) { %>
+                                    <%= new Date(decoded.exp * 1000).toLocaleString() %>
+                                        <% } else { %>
+                                            No expiration set
+                                            <% } %>
+                            </td> <!-- Display the token expiry time -->
+                        </tr>
+                        <tr>
+                            <td>Issued At</td>
+                            <td>
+                                <% if (decoded.iat) { %>
+                                    <%= new Date(decoded.iat * 1000).toLocaleString() %>
+                                        <% } else { %>
+                                            No issue time set
+                                            <% } %>
+                            </td> <!-- Display the issue time -->
+                        </tr>
+                        <tr>
+                            <td>Expire at</td>
+                            <td>
+                                <% if (decoded.exp) { %>
+                                    <span id="countdown"></span>
+                                    <script>
+                                        const expirationTime = <%= decoded.exp * 1000 %>;
+                                        const countdownElement = document.getElementById('countdown');
+
+                                        function updateCountdown() {
+                                            const now = new Date().getTime();
+                                            const timeLeft = expirationTime - now;
+
+                                            if (timeLeft > 0) {
+                                                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                                                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                                                countdownElement.textContent = `${hours}h ${minutes}m ${seconds}s`;
+                                            } else {
+                                                countdownElement.textContent = "Expired";
+                                                clearInterval(interval);
+                                            }
+                                        }
+
+                                        const interval = setInterval(updateCountdown, 1000);
+                                        updateCountdown();
+                                    </script>
+                                <% } else { %>
+                                    No expiration set
+                                <% } %>
+                            </td> <!-- Countdown to token expiration -->
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Logout Button -->
+        <a href="/logout" class="btn btn-danger">Logout</a>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+</body>
+
+</html>
