@@ -24,6 +24,50 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views')); // Ensure 'views' folder exists
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware to authenticate token
+function authenticateToken(req, res, next) {
+    const token = req.cookies.auth_token;
+
+    if (!token) {
+        return res.redirect('/login'); // Redirect to login if no token is found
+    }
+
+    jwt.verify(token, JWT_SECRET_KEY, (err, decoded) => {
+        if (err) {
+            return res.redirect('/login'); // Redirect to login if the token is invalid
+        }
+
+        // Attach the decoded token to the request object
+        req.user = decoded;
+        next();
+    });
+}
+
+// Sliding expiration middleware
+app.use((req, res, next) => {
+    const token = req.cookies.auth_token;
+
+    if (token) {
+        jwt.verify(token, JWT_SECRET_KEY, (err, decoded) => {
+            if (!err) {
+                const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+                const remainingTime = decoded.exp - currentTime; // Remaining time on the token
+
+                // Ensure the remaining time is positive
+                if (remainingTime > 0) {
+                    const newExpirationTime = remainingTime + 5; // Add 5 seconds to the remaining time
+
+                    // Generate a new token with the updated expiration time
+                    const newToken = jwt.sign({ username: decoded.username }, JWT_SECRET_KEY, { expiresIn: newExpirationTime });
+                    res.cookie('auth_token', newToken, { httpOnly: true, secure: false });
+                }
+            }
+        });
+    }
+
+    next();
+});
+
 // Route to show the login page
 app.get('/login', (req, res) => {
     res.render('login', { error: null });
@@ -41,14 +85,13 @@ app.post('/login', (req, res) => {
             const token = jwt.sign({ username: user.username }, JWT_SECRET_KEY, { expiresIn: '10s' }); // Expires in 10 seconds
 
             // Set the token in a cookie
-            res.cookie('auth_token', token, { httpOnly: true, secure: false });  // `secure: true` for HTTPS
+            res.cookie('auth_token', token, { httpOnly: true, secure: false }); // `secure: true` for HTTPS
             res.redirect('/dashboard');
         } else {
             res.render('login', { error: 'Invalid credentials' });
         }
     });
 });
-
 
 // Route to show the create user page
 app.get('/create-user', (req, res) => {
@@ -84,28 +127,28 @@ app.post('/create-user', (req, res) => {
     });
 });
 
-app.get('/dashboard', (req, res) => {
-    const token = req.cookies.auth_token; // Retrieve JWT from cookies
-    console.log('JWT Token:', token);
+// Route to show the dashboard page
+app.get('/dashboard', authenticateToken, (req, res) => {
+    const token = req.cookies.auth_token; // Retrieve the token from cookies
 
-    if (!token) {
-        console.log('No token found. Redirecting to login.');
-        return res.redirect('/login'); // If no token, redirect to login page
-    }
-
-    // Verify and decode JWT
     jwt.verify(token, JWT_SECRET_KEY, (err, decoded) => {
         if (err) {
-            console.log('Invalid token:', err.message);
-            return res.redirect('/login'); // If token is invalid, redirect to login
+            return res.redirect('/login'); // Redirect to login if the token is invalid
         }
 
-        console.log('Decoded JWT:', decoded);
-        // Pass the decoded token to the EJS template
-        res.render('dashboard', { user: decoded, token: token, decoded: decoded });
+        // Pass the decoded token and other data to the EJS template
+        res.render('dashboard', { user: req.user, token: token, decoded: decoded });
     });
 });
 
+// Refresh token route
+app.post('/refresh-token', authenticateToken, (req, res) => {
+    const newToken = jwt.sign({ username: req.user.username }, JWT_SECRET_KEY, { expiresIn: '10s' });
+
+    // Set the new token in a cookie
+    res.cookie('auth_token', newToken, { httpOnly: true, secure: false });
+    res.send('Token refreshed');
+});
 
 // Route to handle logout
 app.get('/logout', (req, res) => {
@@ -113,7 +156,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/login'); // Redirect to login page
 });
 
-
+// Start the server
 app.listen(3901, () => {
     console.log('Server running on port 3901');
 });
